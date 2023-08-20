@@ -257,20 +257,55 @@ public sealed class ShowdownSet : IBattleTemplate
         return (Nature = StringUtil.FindIndexIgnoreCase(Strings.natures, naturestr)) >= 0;
     }
 
-    private bool ParseEntry(ReadOnlySpan<char> identifier, ReadOnlySpan<char> value) => identifier switch
+private bool ParseEntry(ReadOnlySpan<char> identifier, ReadOnlySpan<char> value)
+{
+    Dictionary<string, string> identifierMap = new Dictionary<string, string>
     {
-        "Ability"       => (Ability = StringUtil.FindIndexIgnoreCase(Strings.abilitylist, value)) >= 0,
-        "Nature"        => (Nature  = StringUtil.FindIndexIgnoreCase(Strings.natures    , value)) >= 0,
-        "Shiny"         => Shiny         = StringUtil.IsMatchIgnoreCase("Yes", value),
-        "Gigantamax"    => CanGigantamax = StringUtil.IsMatchIgnoreCase("Yes", value),
-        "Friendship"    => ParseFriendship(value),
-        "EVs"           => ParseLineEVs(value),
-        "IVs"           => ParseLineIVs(value),
-        "Level"         => ParseLevel(value),
-        "Dynamax Level" => ParseDynamax(value),
-        "Tera Type"     => ParseTeraType(value),
-        _ => false,
+        { "Ability", "능력" },
+        { "Nature", "성격" },
+        { "Shiny", "이로치" },
+        { "Gigantamax", "기가맥스" },
+        { "Friendship", "친밀도" },
+        { "EVs", "노력치" },
+        { "IVs", "개체값" },
+        { "Level", "레벨" },
+        { "Dynamax Level", "다이나맥스 레벨" },
+        { "Tera Type", "테라 타입" },
     };
+
+    if (identifierMap.TryGetValue(identifier.ToString(), out string? translatedIdentifier) && translatedIdentifier != null)
+    {
+        switch (translatedIdentifier)
+        {
+            case "능력":
+                return (Ability = StringUtil.FindIndexIgnoreCase(Strings.abilitylist, value)) >= 0;
+            case "성격":
+                return (Nature = StringUtil.FindIndexIgnoreCase(Strings.natures, value)) >= 0;
+            case "이로치":
+                return Shiny = StringUtil.IsMatchIgnoreCase("예", value);
+            case "기가맥스":
+                return CanGigantamax = StringUtil.IsMatchIgnoreCase("예", value);
+            case "친밀도":
+                return ParseFriendship(value);
+            case "노력치":
+                return ParseLineEVs(value);
+            case "개체값":
+                return ParseLineIVs(value);
+            case "레벨":
+                return ParseLevel(value);
+            case "다이나맥스 레벨":
+                return ParseDynamax(value);
+            case "테라 타입":
+                return ParseTeraType(value);
+            default:
+                return false;
+        }
+    }
+    else
+    {
+        return false;
+    }
+}
 
     private bool ParseLevel(ReadOnlySpan<char> value)
     {
@@ -359,28 +394,37 @@ public sealed class ShowdownSet : IBattleTemplate
         var ivs = GetStringStats(IVs, maxIV);
         if (ivs.Length != 0)
             result.Add($"IVs: {string.Join(" / ", ivs)}");
+            result.Add($"개체값: {string.Join(" / ", ivs)}");
 
         // EVs
         var evs = GetStringStats(EVs, 0);
         if (evs.Length != 0)
             result.Add($"EVs: {string.Join(" / ", evs)}");
+            result.Add($"노력치: {string.Join(" / ", evs)}");
 
         // Secondary Stats
         if ((uint)Ability < Strings.Ability.Count)
             result.Add($"Ability: {Strings.Ability[Ability]}");
+            result.Add($"특성: {Strings.Ability[Ability]}");
         if (Context == EntityContext.Gen9 && TeraType != MoveType.Any && (uint)TeraType < Strings.Types.Count)
             result.Add($"Tera Type: {Strings.Types[(int)TeraType]}");
+            result.Add($"테라 타입: {Strings.Types[(int)TeraType]}");
         if (Level != 100)
             result.Add($"Level: {Level}");
+            result.Add($"레벨: {Level}");
         if (Shiny)
             result.Add("Shiny: Yes");
+            result.Add("이로치: 예");
         if (Context == EntityContext.Gen8 && DynamaxLevel != 10)
             result.Add($"Dynamax Level: {DynamaxLevel}");
+            result.Add($"다이맥스 레벨: {DynamaxLevel}");
         if (Context == EntityContext.Gen8 && CanGigantamax)
             result.Add("Gigantamax: Yes");
+            result.Add("기가맥스: 예");
 
         if ((uint)Nature < Strings.Natures.Count)
             result.Add($"{Strings.Natures[Nature]} Nature");
+            result.Add($"{Strings.Natures[Nature]} 성격"); 
 
         // Moves
         result.AddRange(GetStringMoves());
